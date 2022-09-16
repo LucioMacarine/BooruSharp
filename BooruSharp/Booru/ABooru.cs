@@ -1,4 +1,5 @@
-﻿using BooruSharp.Search;
+﻿using System.Collections.Generic;
+using BooruSharp.Search;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -239,23 +240,40 @@ namespace BooruSharp.Booru
 
         // TODO: Handle limitrate
 
-        private protected async Task<string> GetJsonAsync(string url)
+        /// <summary>
+        /// Makes the Http Request
+        /// </summary>
+        /// <param name="url">The url that the request will be submitted to</param>
+        /// <param name="requestMethod">The Method of the request (E.g. HttpMethod.Get, HttpMethod.Post)</param>
+        /// <param name="content">The payload (in json) for this request</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthentificationRequired"></exception>
+        /// <exception cref="TooManyTags"></exception>
+        private protected async Task<string> GetJsonAsync(string url, HttpMethod requestMethod, string content = null)
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-            var message = new HttpRequestMessage(HttpMethod.Get, url);
+            var message = new HttpRequestMessage(requestMethod, url);
+
+            if (!string.IsNullOrEmpty(content)) message.Content = new StringContent(content, System.Text.Encoding.UTF8, "application/json"); //if there is a payload, add it to the request.
+
             PreRequest(message);
             var msg = await HttpClient.SendAsync(message);
 
             if (msg.StatusCode == HttpStatusCode.Forbidden)
                 throw new AuthentificationRequired();
 
-            if (msg.StatusCode == (HttpStatusCode)422)
+            if (msg.StatusCode == (HttpStatusCode)422 && NoMoreThanTwoTags)
                 throw new TooManyTags();
 
             msg.EnsureSuccessStatusCode();
 
             return await msg.Content.ReadAsStringAsync();
+        }
+
+        private protected Task<string> GetJsonAsync(string url) //if only HttpMethod was an enum... 😔
+        {
+            return GetJsonAsync(url, HttpMethod.Get);
         }
 
         private protected Task<string> GetJsonAsync(Uri url)

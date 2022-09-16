@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using BooruSharp.Search;
+using System.Threading.Tasks;
 
 namespace BooruSharp.Booru.Template
 {
@@ -23,8 +25,8 @@ namespace BooruSharp.Booru.Template
         /// The options to use. Use <c>|</c> (bitwise OR) operator to combine multiple options.
         /// </param>
         protected E621(string domain, BooruOptions options = BooruOptions.None)
-            : base(domain, UrlFormat.Danbooru, options | BooruOptions.NoWiki | BooruOptions.NoRelated | BooruOptions.NoComment 
-                  | BooruOptions.NoTagByID | BooruOptions.NoPostCount | BooruOptions.NoFavorite)
+            : base(domain, UrlFormat.Danbooru, options | BooruOptions.NoWiki | BooruOptions.NoRelated | BooruOptions.NoComment
+                  | BooruOptions.NoTagByID | BooruOptions.NoPostCount)
         { }
 
         /// <inheritdoc/>
@@ -133,6 +135,65 @@ namespace BooruSharp.Booru.Template
                 (Search.Tag.TagType)elem["category"].Value<int>(),
                 elem["post_count"].Value<int>()
                 );
+        }
+
+        /// <summary>
+        /// Adds a post to your favorites.
+        /// </summary>
+        /// <remarks>
+        /// You must login using <see cref="ABooru.Auth"/> property before calling this method.
+        /// </remarks>
+        /// <param name="postId">The ID of the post you want to add to your favorites.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthentificationInvalid"/>
+        /// <exception cref="AuthentificationRequired"/>
+        /// <exception cref="FeatureUnavailable"/>
+        /// <exception cref="System.Net.Http.HttpRequestException"/>
+        public override async Task AddFavoriteAsync(int postId)
+        {
+            if (!HasFavoriteAPI)
+                throw new FeatureUnavailable();
+
+            if (Auth == null)
+                throw new AuthentificationRequired();
+
+            //this is the actual content that will be posted.
+            var content = "{\"post_id\": " + $"\"{postId.ToString()}\"" + "}";
+
+            string response = await GetJsonAsync(BaseUrl + "favorites.json", HttpMethod.Post, content);
+
+            /*
+            The checks that were here are not useful for E6-Based boorus.
+            Others should be implemented...
+            */
+        }
+
+        /// <summary>
+        /// Removes a post from your favorites.
+        /// </summary>
+        /// <remarks>
+        /// You must login using <see cref="ABooru.Auth"/> property before calling this method.
+        /// </remarks>
+        /// <param name="postId">The ID of the post you want to remove from your favorites.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthentificationInvalid"/>
+        /// <exception cref="AuthentificationRequired"/>
+        /// <exception cref="FeatureUnavailable"/>
+        /// <exception cref="System.Net.Http.HttpRequestException"/>
+        public override async Task RemoveFavoriteAsync(int postId)
+        {
+            if (!HasFavoriteAPI)
+                throw new FeatureUnavailable();
+
+            if (Auth == null)
+                throw new AuthentificationRequired();
+
+            string response = await GetJsonAsync(BaseUrl + "favorites/" + $"{postId}.json", HttpMethod.Delete);
+
+            /*
+            The checks that were here are not useful for E6-Based boorus.
+            Others should be implemented...
+            */
         }
 
         // GetRelatedSearchResult not available // TODO: Available with credentials?
